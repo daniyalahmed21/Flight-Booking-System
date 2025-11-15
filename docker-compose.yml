@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - ./api-gateway:/usr/src/app
+    command: npm run dev
+
+  flight-service:
+    build: ./flight-service
+    container_name: flight-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=change_me
+      - DB_NAME=flight_booking
+    volumes:
+      - ./flight-service:/usr/src/app
+    depends_on:
+      - mysql
+    command: npm run dev
+
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DB_URI=mongodb://mongo:27017/booking_db
+    volumes:
+      - ./booking-service:/usr/src/app
+    depends_on:
+      - mongo
+    command: npm run dev
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+    volumes:
+      - ./notification-service:/usr/src/app
+    depends_on:
+      - api-gateway
+    command: npm run dev
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: change_me
+      MYSQL_DATABASE: flight_booking
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mysql_data:
+  mongo_data:
+
+# Notes:
+# - Each service expects a Dockerfile in its folder for `build:` to succeed. If a service
+#   doesn't have a Dockerfile yet, either add one or change `build:` to use a Node image.
+# - This compose file now includes MySQL and MongoDB. Credentials and defaults are in
+#   the per-service `.env.example` files. Update secrets before using in production.
